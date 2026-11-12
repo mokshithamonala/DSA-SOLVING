@@ -42,6 +42,46 @@ app.get('/api/reminders/status', (req, res) => {
   });
 });
 
+// Server-side email dispatcher proxying Resend API securely
+app.post('/api/send-email', async (req, res) => {
+  const { to, subject, html, text, apiKey } = req.body || {};
+  const activeKey = apiKey || process.env.RESEND_API_KEY;
+
+  if (!activeKey) {
+    return res.status(400).json({ success: false, error: 'RESEND_API_KEY is not configured.' });
+  }
+
+  try {
+    const resendRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${activeKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'CodeOrbit <onboarding@resend.dev>',
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        text,
+        html
+      })
+    });
+
+    const data = await resendRes.json();
+    if (!resendRes.ok) {
+      return res.status(resendRes.status).json({ 
+        success: false, 
+        error: data.message || 'Resend API returned an error',
+        details: data 
+      });
+    }
+
+    return res.json({ success: true, data });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Trigger reminder cycle manually on server
 app.post('/api/reminders/trigger', async (req, res) => {
   const { resendApiKey, targetEmail } = req.body || {};

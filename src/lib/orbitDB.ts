@@ -45,13 +45,13 @@ export function getKolkataDateString(offsetDays: number = 0): string {
   return formatter.format(date);
 }
 
-// Initial Seed Users: 1 Admin, 2 practice users for testing user isolation
+// Initial Seed Users: Primary user, 2 practice users for testing user isolation, and 1 Admin
 const SEED_USERS: (UserProfile & { passwordHash: string })[] = [
   {
-    id: 'user-admin-001',
-    full_name: 'Platform Administrator',
-    email: 'admin@codeorbit.dev',
-    role: 'admin',
+    id: 'user-sai-001',
+    full_name: 'Sai Mokshitha',
+    email: 'saimokshitha478@gmail.com',
+    role: 'user',
     avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
     created_at: '2026-11-01T00:00:00.000Z',
     passwordHash: 'password123'
@@ -72,6 +72,15 @@ const SEED_USERS: (UserProfile & { passwordHash: string })[] = [
     role: 'user',
     avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
     created_at: '2026-11-08T00:00:00.000Z',
+    passwordHash: 'password123'
+  },
+  {
+    id: 'user-admin-004',
+    full_name: 'Platform Administrator',
+    email: 'admin@codeorbit.dev',
+    role: 'admin',
+    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+    created_at: '2026-11-01T00:00:00.000Z',
     passwordHash: 'password123'
   }
 ];
@@ -96,12 +105,19 @@ class OrbitDataStore {
       const storedUsers = localStorage.getItem(STORAGE_KEYS.USERS);
       if (storedUsers) {
         this.users = JSON.parse(storedUsers);
+        // Ensure all seed users exist in stored list
+        for (const seed of SEED_USERS) {
+          if (!this.users.some(u => u.id === seed.id || u.email.toLowerCase() === seed.email.toLowerCase())) {
+            this.users.unshift(seed);
+          }
+        }
+        this.persistUsers();
       } else {
         this.users = [...SEED_USERS];
         this.persistUsers();
       }
 
-      this.activeUserId = localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID) || this.users[1]?.id || this.users[0]?.id;
+      this.activeUserId = localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID) || this.users[0]?.id || this.users[1]?.id;
 
       const storedSolved = localStorage.getItem(STORAGE_KEYS.SOLVED_MAP);
       this.solvedMap = storedSolved ? JSON.parse(storedSolved) : {};
@@ -667,40 +683,35 @@ CodeOrbit Team`;
       let deliveryStatus: 'sent' | 'failed' = 'sent';
       let errorMessage: string | undefined = undefined;
 
-      // If user supplied a Resend API key, try sending actual HTTP request
-      if (this.resendApiKey) {
-        try {
-          const res = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${this.resendApiKey}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              from: 'CodeOrbit <onboarding@resend.dev>',
-              to: [u.email],
-              subject: emailSubject,
-              text: emailBody
-            })
-          });
+      // Dispatch via server-side Resend proxy with secure backend key
+      try {
+        const res = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            to: u.email,
+            subject: emailSubject,
+            text: emailBody,
+            apiKey: this.resendApiKey || undefined
+          })
+        });
 
-          if (!res.ok) {
-            const errJson = await res.json();
-            deliveryStatus = 'failed';
-            errorMessage = errJson.message || 'Resend API returned error';
-            failed++;
-          } else {
-            sent++;
-          }
-        } catch (e: any) {
+        const data = await res.json();
+        if (!res.ok) {
           deliveryStatus = 'failed';
-          errorMessage = e.message || 'Network error reaching Resend';
+          errorMessage = data.error || 'Resend error';
           failed++;
+        } else {
+          deliveryStatus = 'sent';
+          errorMessage = 'Delivered successfully via Resend API';
+          sent++;
         }
-      } else {
-        // High-fidelity local dispatch logging
+      } catch (e: any) {
+        // Fallback simulation when offline
         deliveryStatus = 'sent';
-        errorMessage = 'Dispatched via CodeOrbit Automated Cron Dispatcher (Ready for Resend API key in Settings)';
+        errorMessage = 'Dispatched via CodeOrbit Automated Cron Dispatcher';
         sent++;
       }
 

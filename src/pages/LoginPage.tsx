@@ -118,11 +118,23 @@ export const LoginPage: React.FC = () => {
             <div className="grid grid-cols-1 gap-2">
               <button
                 type="button"
+                onClick={() => handleQuickLogin('saimokshitha478@gmail.com')}
+                className="flex items-center justify-between p-2 rounded bg-slate-950 border border-sky-500/30 hover:border-sky-500/60 text-left transition-colors cursor-pointer text-xs"
+              >
+                <div className="flex items-center gap-2">
+                  <UserCheck className="w-3.5 h-3.5 text-sky-400" />
+                  <span className="text-slate-100 font-semibold">Sai Mokshitha (Primary Account)</span>
+                </div>
+                <span className="text-[10px] text-sky-400 font-mono">saimokshitha478@gmail.com</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => handleQuickLogin('alex@codeorbit.dev')}
                 className="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800 hover:border-slate-700 text-left transition-colors cursor-pointer text-xs"
               >
                 <div className="flex items-center gap-2">
-                  <UserCheck className="w-3.5 h-3.5 text-sky-400" />
+                  <UserCheck className="w-3.5 h-3.5 text-slate-400" />
                   <span className="text-slate-200">Alex Chen (User A)</span>
                 </div>
                 <span className="text-[10px] text-slate-500 font-mono">alex@codeorbit.dev</span>
