@@ -1,0 +1,1415 @@
+# BUILD A COMPLETE MULTI-USER DSA PRACTICE PLATFORM — CODEORBIT (400+ VERIFIED LEETCODE EASY QUESTIONS)
+
+Act as a senior full-stack developer, software architect, database engineer, UI/UX designer, security engineer, and product developer.
+
+I want you to transform my existing DSA practice application into a complete, production-ready, multi-user DSA learning platform.
+
+**IMPORTANT: This application is NOT restricted to two users. ANY PERSON SHOULD BE ABLE TO SIGN UP, CREATE AN ACCOUNT, LOG IN, PRACTICE QUESTIONS, TRACK THEIR OWN PROGRESS, AND AUTOMATICALLY RECEIVE PERSONALIZED DAILY EMAIL REMINDERS.**
+
+There must be no two-user restriction, no fixed approved email list, no friend-only registration, and no maximum user limit.
+
+The application must implement actual authentication, database persistence, daily question assignments, progress tracking, automatic email notifications, and all other functionality described below.
+
+Do not build just a frontend demonstration. Implement the complete working application.
+
+---
+
+# 1. PRODUCT IDENTITY
+
+**Application Name: CodeOrbit**
+
+**Tagline: Your Daily DSA Practice Platform.**
+
+Product description:
+
+CodeOrbit is a modern, multi-user Data Structures and Algorithms practice platform that helps students and developers consistently improve their problem-solving skills through structured daily LeetCode Easy challenges.
+
+The platform must support unlimited registered users.
+
+### Main objectives
+
+1. Allow anyone to register using their personal email and password.
+2. Automatically create an individual account and dashboard for every registered user.
+3. Provide at least 400 unique, verified LeetCode Easy questions.
+4. Organize questions into structured DSA topics.
+5. Assign five questions daily from the user's active topic.
+6. Automatically carry unfinished questions forward.
+7. Track individual question completion.
+8. Unlock topics based on individual progress.
+9. Calculate personal coding streaks.
+10. Display detailed progress analytics.
+11. Automatically send personalized daily email reminders to EVERY registered user at 10:00 PM IST.
+12. Ensure that every email contains the correct questions and progress belonging to its recipient.
+
+**Most important requirement:** Every user's email address must automatically be registered in the reminder system after successful signup. The user must not need to manually add their email to an admin list or reminder list.
+
+---
+
+# 2. TECHNOLOGY STACK
+
+Use the following technologies.
+
+### Frontend
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- shadcn/ui
+- Lucide React
+- React Router
+- Recharts
+- TanStack Query
+
+### Backend
+- Supabase
+- Supabase Authentication
+- Supabase PostgreSQL
+- Supabase Row Level Security
+- Supabase Edge Functions
+- Supabase Cron or an equivalent reliable scheduler
+
+### Email service
+- Resend API
+- Supabase Edge Functions
+- Server-side scheduled email processing
+
+### Important security requirements
+
+- Never expose Supabase service role keys in frontend code.
+- Never expose Resend API keys in frontend code.
+- Store secrets using secure server-side environment variables.
+- Implement proper authentication and authorization.
+- Use database migrations.
+- Enable Row Level Security.
+- Do not use fake backend responses.
+- Do not claim functionality is working without testing it.
+
+If Supabase or Resend requires configuration, implement the integration and clearly explain the required environment variables and setup steps.
+
+---
+
+# 3. OPEN REGISTRATION AND MULTI-USER AUTHENTICATION
+
+THIS IS ONE OF THE MOST IMPORTANT CHANGES.
+
+The application must support UNLIMITED USERS.
+
+Anyone visiting CodeOrbit should be able to create an account.
+
+There must be no restriction to two members.
+
+### Authentication pages
+
+Create:
+
+1. Sign Up
+2. Login
+3. Forgot Password
+4. Reset Password
+5. Email Verification
+6. User Profile
+7. Logout
+
+### Signup form
+
+Ask for:
+
+- Full name
+- Email address
+- Password
+- Confirm password
+
+### Signup workflow
+
+When a new person registers:
+
+1. Accept their registration.
+2. Validate the email and password.
+3. Create their account using Supabase Authentication.
+4. Send an email verification link.
+5. Verify the email address.
+6. Create their user profile automatically.
+7. Save their email address in the user profiles database.
+8. Automatically create their individual DSA progress records.
+9. Automatically initialize their first DSA topic.
+10. Automatically create their daily reminder settings.
+11. Set daily email reminders to enabled by default.
+12. Set the reminder timezone to Asia/Kolkata.
+13. Set the default reminder time to 10:00 PM.
+14. Redirect the user to their personal dashboard after successful verification and login.
+
+The entire process must happen automatically.
+
+**Users must NOT manually enter their email into a separate reminder registration form.**
+
+### Unlimited registration
+
+- Anyone can register.
+- Do not use an approved-users allowlist.
+- Do not hardcode email addresses.
+- Do not limit registration to two accounts.
+- Do not require an administrator to approve ordinary users.
+- Do not require a friend invitation.
+- Every verified account must automatically become eligible for daily reminders.
+- Prevent duplicate accounts using the same email address through Supabase Authentication.
+
+### User isolation
+
+Every registered user must have their own:
+
+- Dashboard
+- Daily questions
+- Pending questions
+- Solved questions
+- Topic progression
+- Streaks
+- Activity calendar
+- Reminder preferences
+- Email history
+- Personal statistics
+
+One user's progress must never modify another user's progress.
+
+All user-specific records must be associated with the authenticated Supabase user ID.
+
+### Admin account
+
+Create a separate administrator role.
+
+The administrator can manage platform-wide question data, view system health and inspect email delivery statistics.
+
+Normal users must not receive administrative permissions.
+
+---
+
+# 4. MANDATORY: 400+ VERIFIED LEETCODE EASY QUESTIONS
+
+This is a non-negotiable requirement.
+
+The application must contain at least 400 unique, verified LeetCode Easy questions.
+
+Target: 450–500 questions if sufficient verified records are available.
+
+Every question must have its own individual clickable LeetCode problem link.
+
+Do not use:
+- Placeholder questions.
+- Fake questions.
+- Duplicate questions.
+- Medium questions.
+- Hard questions.
+- Topic URLs instead of individual problem URLs.
+
+### Data sources
+
+Inspect structured public LeetCode problem datasets.
+
+Possible sources:
+
+1. https://huggingface.co/datasets/kaysss/leetcode-problem-set
+2. https://huggingface.co/datasets/kaysss/leetcode-problem-detailed
+3. https://github.com/WilliamZhang20/leetcode-clusters
+4. https://github.com/mcaupybugs/leetcode-problems-db
+
+Inspect the dataset schema before importing.
+
+Do not assume every record is Easy.
+
+### Required question fields
+
+Each question must contain:
+
+- Unique database ID
+- LeetCode question ID
+- Problem title
+- Problem slug
+- Direct LeetCode URL
+- Difficulty
+- Topic tags
+- Premium status
+- Source dataset
+- Verification timestamp
+- Active/inactive status
+
+Example:
+
+Question: Two Sum
+
+Question ID: 1
+
+Difficulty: Easy
+
+Topics: Array, Hash Table
+
+URL: https://leetcode.com/problems/two-sum/
+
+Premium: False
+
+### Validation requirements
+
+Import only questions that:
+
+- Have exactly Easy difficulty.
+- Have a valid LeetCode question ID.
+- Have a valid title.
+- Have a verified title slug.
+- Have an individual problem URL.
+- Are not duplicates.
+
+URL format:
+
+https://leetcode.com/problems/{titleSlug}/
+
+Use actual dataset metadata to construct URLs. Never guess slugs.
+
+### Premium questions
+
+- Identify Premium questions accurately.
+- Display a Premium badge.
+- Do not claim Premium questions are freely accessible.
+- Maintain Premium status in the database.
+
+### Duplicate prevention
+
+Use LeetCode question ID as a unique identifier.
+
+A question can belong to multiple topics, but it must exist only once in the questions table.
+
+Use a separate question_topics mapping table.
+
+### Admin question validation dashboard
+
+Display:
+
+- Total imported questions
+- Total verified Easy questions
+- Total unique Easy questions
+- Duplicate records
+- Invalid URLs
+- Premium questions
+- Excluded Medium questions
+- Excluded Hard questions
+- Missing metadata
+- Last successful import
+- Import status
+
+Show the following collection statuses:
+
+- Below 400: Collection Incomplete.
+- 400 or more: Minimum Requirement Satisfied.
+- Failed import: Show error and retry option.
+
+Do not display fake success messages.
+
+The question collection must actually pass validation before being marked complete.
+
+---
+
+# 5. DSA TOPIC ORGANIZATION
+
+Organize questions into a structured learning roadmap.
+
+Use real topic tags from the imported dataset.
+
+Default learning order:
+
+### Phase 1 — Fundamentals
+
+1. Arrays
+2. Strings
+3. Hash Tables
+4. Sorting
+5. Searching
+6. Binary Search
+7. Two Pointers
+8. Sliding Window
+9. Prefix Sum
+10. Matrix
+
+### Phase 2 — Linear Data Structures
+
+11. Linked Lists
+12. Stack
+13. Queue
+14. Deque
+15. Recursion
+16. Basic Backtracking
+
+### Phase 3 — Trees and Heaps
+
+17. Binary Trees
+18. Binary Search Trees
+19. Tree Traversals
+20. Heaps
+21. Priority Queues
+22. Tries
+
+### Phase 4 — Graphs
+
+23. Graph Basics
+24. BFS
+25. DFS
+26. Union Find
+27. Topological Sorting
+
+### Phase 5 — Problem-Solving Techniques
+
+28. Greedy Algorithms
+29. Dynamic Programming
+30. Bit Manipulation
+31. Mathematics
+32. Intervals
+33. Monotonic Stack
+34. Monotonic Queue
+35. Divide and Conquer
+
+### Phase 6 — Additional Topics
+
+36. Simulation
+37. Counting
+38. Geometry
+39. Enumeration
+40. Database / SQL
+41. Other available LeetCode Easy topics.
+
+Requirements:
+
+- Use actual verified questions.
+- Do not fabricate topic associations.
+- Allow multiple topic tags per question.
+- Allow new topics to be added dynamically.
+- Display question counts for each topic.
+- Display progress independently for every user.
+
+---
+
+# 6. QUESTION BANK
+
+Create a dedicated Question Bank page.
+
+Display all 400+ verified Easy questions.
+
+Every question must have:
+
+- LeetCode question number
+- Problem title
+- Difficulty
+- Topic tags
+- Premium or Free badge
+- Individual solved checkbox
+- Direct LeetCode problem link
+
+### Filters
+
+Provide:
+
+- Topic
+- Difficulty
+- Solved
+- Unsolved
+- Premium
+- Free
+- Search by title
+- Search by question ID
+
+Default difficulty: Easy.
+
+### Search
+
+Users should be able to search questions by:
+
+- Problem name
+- LeetCode ID
+- Topic
+- Keywords
+
+Implement efficient server-side search and pagination.
+
+### Completion
+
+When a user manually marks a question as solved:
+
+- Save the completion to the database.
+- Update their personal progress.
+- Update topic progress.
+- Update overall progress.
+- Update the daily assignment.
+- Recalculate their streak when applicable.
+
+Opening a LeetCode link must never automatically mark a question as solved.
+
+A question marked solved by one account must remain unsolved for every other account until they manually complete it themselves.
+
+---
+
+# 7. PERSONALIZED DAILY FIVE-QUESTION CHALLENGE
+
+Create a dedicated Today's Challenge page.
+
+Every user should receive their own daily assignment.
+
+### Assignment logic
+
+1. Identify the authenticated user.
+2. Fetch their active topic.
+3. Fetch their unsolved questions in that topic.
+4. Check their pending assignments.
+5. Carry forward unfinished questions.
+6. Assign up to five new questions when no pending workload exists.
+7. Store the assignment in the database.
+8. Keep the assignment stable for that user and date.
+
+All new questions must belong to the user's current active topic.
+
+### Daily assignment rules
+
+- Assign five new questions when possible and no pending questions exist.
+- Carry forward unfinished questions.
+- Never lose pending questions.
+- Never duplicate active questions.
+- Never assign completed questions again.
+- Never randomly mix unrelated topics.
+- If fewer than five questions remain, assign all available questions.
+- If more than five questions remain pending, show all pending questions without adding more new questions.
+
+Each user must have independent assignments.
+
+### Display
+
+Show:
+
+- Today's date
+- Active topic
+- Daily target
+- Questions assigned
+- Completed count
+- Pending count
+- Progress percentage
+- Progress bar
+
+### Manual completion
+
+Only the user's manual checkbox action counts as completion.
+
+The checkbox must update the database and refresh the UI immediately.
+
+---
+
+# 8. AUTOMATIC PENDING QUESTION CARRY-FORWARD
+
+This feature must work independently for every account.
+
+Example:
+
+Day 1:
+- Q1, Q2, Q3, Q4, Q5 assigned.
+- Q1 and Q2 completed.
+- Q3, Q4 and Q5 pending.
+
+Day 2:
+- Q3, Q4 and Q5 appear automatically.
+- No new questions are added until the pending workload is cleared.
+
+Once pending work is cleared, the system can assign five new questions from the same active topic.
+
+Rules:
+
+- Preserve original assignment dates.
+- Show Pending labels.
+- Never delete unfinished work.
+- Never mark unfinished work as solved.
+- Never silently replace pending questions.
+- Preserve original problem URLs.
+- Carry forward until manually completed.
+- Never mix another user's assignments.
+
+If the user has more than five pending questions, display all of them.
+
+---
+
+# 9. TOPIC LOCKING AND UNLOCKING
+
+Create an individual DSA roadmap for each user.
+
+Topic statuses:
+
+- Locked
+- Active
+- Completed
+
+Rules:
+
+1. First topic begins as Active.
+2. Remaining topics begin as Locked.
+3. Every unique question in the active topic must be completed.
+4. Only then unlock the next topic.
+5. Do not unlock based on daily target completion alone.
+6. Do not unlock while any question in the current topic remains unsolved.
+7. Handle questions belonging to multiple topics correctly.
+8. Calculate progression independently for each user.
+
+Two users must be able to progress through different topics at different speeds.
+
+---
+
+# 10. PERSONAL DASHBOARD
+
+After login, redirect every user to their own dashboard.
+
+Display a personalized welcome message.
+
+Example:
+
+Good evening, [User Name]!
+
+Ready for today's coding challenge?
+
+### Statistics
+
+Display:
+
+- Total Easy questions available
+- Total questions solved
+- Total pending questions
+- Questions solved today
+- Current streak
+- Longest streak
+- Completed topics
+- Overall completion percentage
+
+### Daily challenge
+
+Display the user's current daily assignments.
+
+### Active topic
+
+Display:
+
+- Topic name
+- Total questions
+- Solved questions
+- Remaining questions
+- Percentage completed
+
+### Weekly activity
+
+Create a chart displaying questions solved per day.
+
+### Monthly activity
+
+Create a calendar heatmap.
+
+### Recent activity
+
+Display:
+
+- Question title
+- Topic
+- Difficulty
+- Completion date
+- Direct LeetCode URL
+
+All statistics must come from actual database records.
+
+Never use hardcoded progress.
+
+---
+
+# 11. INDIVIDUAL PROGRESS AND ANALYTICS
+
+Replace the old two-person friend comparison dashboard with a personalized analytics section.
+
+Create a page called My Progress.
+
+Show:
+
+- Total questions solved
+- Total questions pending
+- Overall completion percentage
+- Topic-wise completion
+- Current streak
+- Longest streak
+- Weekly activity
+- Monthly activity
+- Daily completion history
+- Recent solved questions
+
+Each user must see their own private progress.
+
+Do not display a fixed two-person comparison.
+
+Do not expose other users' private question histories.
+
+---
+
+# 12. AUTOMATIC STREAK SYSTEM
+
+Calculate streaks using manually confirmed question completions.
+
+Rules:
+
+- At least one manually completed question earns one activity day.
+- Multiple completions on the same day count as one streak day.
+- A missed calendar day resets the current streak.
+- Preserve the longest streak.
+- Calculate dates using Asia/Kolkata.
+- Maintain separate streak records for every user.
+
+Display an attractive fire icon and streak counter.
+
+---
+
+# 13. MOST IMPORTANT: AUTOMATIC DAILY EMAIL REMINDERS FOR EVERY REGISTERED USER
+
+THIS IS THE HIGHEST-PRIORITY FUNCTIONALITY.
+
+The system must automatically send daily personalized email reminders to EVERY REGISTERED AND VERIFIED USER.
+
+There must be no two-user restriction.
+
+There must be no hardcoded email addresses.
+
+There must be no manual email registration.
+
+### Automatic email registration
+
+When someone signs up and verifies their email:
+
+1. Retrieve their authenticated user ID.
+2. Retrieve their verified email address.
+3. Create their reminder settings automatically.
+4. Save the email address in the reminder settings table.
+5. Set reminders_enabled = true.
+6. Set timezone = Asia/Kolkata.
+7. Set reminder_time = 22:00.
+8. Make the user eligible for the next scheduled reminder.
+
+This must happen for every new registration.
+
+If 10 people register, all 10 must be eligible.
+
+If 100 people register, all 100 must be eligible.
+
+If 1,000 people register, the reminder system must be designed to process all eligible users reliably.
+
+Never implement email delivery only for the administrator or two predefined users.
+
+### Email schedule
+
+Default schedule:
+
+- Time: 10:00 PM
+- Timezone: Asia/Kolkata
+- Frequency: Every day
+- Recipients: All eligible registered users
+
+Use a server-side scheduler.
+
+The website does not need to be open.
+
+The user does not need to be logged in.
+
+The browser does not need to be running.
+
+Do not use frontend timers.
+
+### Email provider
+
+Use Resend.
+
+Store the API key securely in Supabase Edge Function secrets.
+
+Create a scheduled Edge Function that:
+
+1. Runs every day at 10 PM IST.
+2. Fetches all verified users with reminders enabled.
+3. Processes users in reliable batches.
+4. Retrieves each user's daily assignments.
+5. Retrieves each user's pending questions.
+6. Retrieves their individual completion count.
+7. Retrieves their active topic.
+8. Retrieves their current streak.
+9. Creates a separate personalized email for each recipient.
+10. Sends the email.
+11. Records delivery status.
+12. Prevents duplicate successful deliveries.
+
+Never send the same user's private information to another recipient.
+
+### Personalized email subject
+
+Your CodeOrbit Daily DSA Reminder — Today's Coding Challenge
+
+### Email template
+
+Hi [User Name],
+
+Your daily CodeOrbit DSA practice reminder is here!
+
+**Today's Topic:** [Active Topic]
+
+**Today's Coding Questions:**
+
+1. [Question Title]
+   LeetCode: [Individual Problem URL]
+   Status: [Solved / Pending]
+
+2. [Question Title]
+   LeetCode: [Individual Problem URL]
+   Status: [Solved / Pending]
+
+3. [Question Title]
+   LeetCode: [Individual Problem URL]
+   Status: [Solved / Pending]
+
+4. [Question Title]
+   LeetCode: [Individual Problem URL]
+   Status: [Solved / Pending]
+
+5. [Question Title]
+   LeetCode: [Individual Problem URL]
+   Status: [Solved / Pending]
+
+**Your Progress**
+
+- Completed today: [Count]
+- Pending questions: [Count]
+- Current streak: [Count] days
+- Overall progress: [Percentage]
+
+**Pending Questions**
+
+[Display actual unfinished questions with their direct LeetCode links.]
+
+Keep going! Consistency is the key to becoming better at problem-solving.
+
+Open CodeOrbit and update your daily progress.
+
+Regards,  
+CodeOrbit Team
+
+### Personalized email conditions
+
+- If questions are pending, highlight them.
+- If all daily questions are completed, send a positive completion message.
+- If a user has carried-forward questions, include them.
+- If the user has no remaining questions in their current topic, show their updated topic status.
+- Do not send misleading reminders.
+- Do not send another user's question list.
+
+### Duplicate email prevention
+
+Create an email_logs table.
+
+Store:
+
+- id
+- user_id
+- recipient_email
+- email_type
+- scheduled_date
+- sent_at
+- delivery_status
+- error_message
+
+Add a unique constraint for successful daily delivery per user and scheduled date.
+
+If sending fails:
+
+- Record the failure.
+- Log the error.
+- Allow safe retries.
+- Do not send duplicates after successful delivery.
+
+### Reminder settings
+
+Create a dedicated Reminder Settings page.
+
+Each user can:
+
+- Enable reminders.
+- Disable reminders.
+- View their registered email.
+- View their reminder time.
+- View their timezone.
+- View recent email delivery history.
+
+Default configuration:
+
+reminders_enabled = true
+
+timezone = Asia/Kolkata
+
+reminder_time = 22:00
+
+Users should receive reminders automatically unless they explicitly disable them.
+
+### Important email reliability requirements
+
+- Process all eligible registered users, not just the first two.
+- Use pagination or batch processing.
+- Handle provider rate limits.
+- Log failures.
+- Implement safe retry logic.
+- Prevent duplicate emails.
+- Never expose API keys.
+- Ensure the scheduler continues operating when nobody is logged in.
+
+---
+
+# 14. DATABASE DESIGN
+
+Create a normalized Supabase PostgreSQL schema.
+
+### profiles
+
+- id (references auth.users)
+- full_name
+- email
+- avatar_url
+- role
+- created_at
+- updated_at
+
+Every account automatically receives one profile.
+
+### questions
+
+- id
+- leetcode_id
+- title
+- title_slug
+- problem_url
+- difficulty
+- is_premium
+- source
+- verified_at
+- is_active
+- created_at
+- updated_at
+
+### topics
+
+- id
+- name
+- slug
+- description
+- display_order
+- is_active
+
+### question_topics
+
+- id
+- question_id
+- topic_id
+
+### user_topic_progress
+
+- id
+- user_id
+- topic_id
+- status
+- total_questions
+- solved_questions
+- unlocked_at
+- completed_at
+- updated_at
+
+### user_question_progress
+
+- id
+- user_id
+- question_id
+- is_solved
+- solved_at
+- created_at
+- updated_at
+
+### daily_assignments
+
+- id
+- user_id
+- question_id
+- assignment_date
+- assignment_type
+- status
+- completed_at
+- created_at
+
+### streaks
+
+- id
+- user_id
+- current_streak
+- longest_streak
+- last_activity_date
+- updated_at
+
+### reminder_settings
+
+- id
+- user_id
+- email
+- reminders_enabled
+- timezone
+- reminder_time
+- created_at
+- updated_at
+
+### email_logs
+
+- id
+- user_id
+- recipient_email
+- email_type
+- scheduled_date
+- sent_at
+- delivery_status
+- error_message
+
+### import_logs
+
+- id
+- source
+- imported_count
+- verified_easy_count
+- duplicate_count
+- invalid_count
+- excluded_medium_count
+- excluded_hard_count
+- status
+- error_message
+- created_at
+
+Add suitable foreign keys, indexes, unique constraints and database validation.
+
+Every user-specific table must reference auth.users.
+
+Do not store passwords in custom tables.
+
+---
+
+# 15. SECURITY AND ROW LEVEL SECURITY
+
+Enable RLS on every appropriate table.
+
+Requirements:
+
+- Anyone can register through the intended signup flow.
+- Only authenticated users can access private dashboard pages.
+- Users can read their own private data.
+- Users can modify only their own progress.
+- Users cannot edit another user's records.
+- Users cannot change their role to admin.
+- Only administrators can manage the question collection.
+- Only authorized server-side functions can send emails.
+- Reminder email processing must use secure server-side credentials.
+- Public users must not access administrative routes.
+- Never disable RLS to fix application errors.
+- Validate all database operations.
+- Protect against unauthorized account creation abuse and automated signup abuse.
+
+Public question metadata can be readable to authenticated users.
+
+Personal progress, reminder preferences and email history must remain private.
+
+Use secure Supabase policies.
+
+---
+
+# 16. ADMIN PANEL
+
+Create a protected administration section.
+
+Admin features:
+
+1. View total registered users.
+2. View verified user count.
+3. View active users.
+4. View total question count.
+5. Import question datasets.
+6. Validate question metadata.
+7. View topic-wise question counts.
+8. View invalid URLs.
+9. View duplicate questions.
+10. View Premium questions.
+11. View email delivery statistics.
+12. View failed email deliveries.
+13. Retry failed emails safely.
+14. View scheduler configuration.
+15. View last successful import.
+16. Monitor reminder processing.
+
+Create an email analytics section showing:
+
+- Total eligible recipients
+- Emails successfully sent
+- Failed deliveries
+- Pending deliveries
+- Delivery success rate
+- Last scheduled execution
+
+Never display users' passwords or sensitive authentication information.
+
+---
+
+# 17. PREMIUM UI/UX DESIGN
+
+Build CodeOrbit as a polished, modern SaaS application.
+
+Design inspiration:
+
+- Linear
+- Notion
+- Vercel
+- LeetCode
+- GitHub
+
+### Visual design
+
+- Modern dark theme by default.
+- Optional light theme.
+- Deep navy or charcoal background.
+- Clean typography.
+- Subtle blue and violet accents.
+- Green for completed tasks.
+- Amber for pending tasks.
+- Gray for locked topics.
+- Rounded cards.
+- Subtle borders.
+- Professional spacing.
+- Smooth hover effects.
+- Responsive layouts.
+
+Avoid excessive gradients, unnecessary animations, clutter and oversized headings.
+
+### Sidebar navigation
+
+Create:
+
+1. Dashboard
+2. Today's Challenge
+3. Question Bank
+4. DSA Roadmap
+5. My Progress
+6. Activity Calendar
+7. Reminder Settings
+8. Profile
+9. Admin Panel (admin only)
+10. Logout
+
+### Authentication design
+
+Create attractive, professional signup and login pages.
+
+The signup page should clearly communicate:
+
+- Free account creation, if the application is configured as free to use.
+- Personal daily DSA practice.
+- 400+ Easy problems.
+- Automatic daily email reminders.
+- Individual progress tracking.
+
+### Responsive design
+
+Support:
+
+- Desktop
+- Laptop
+- Tablet
+- Mobile
+
+On mobile, use a collapsible navigation menu and touch-friendly question cards.
+
+---
+
+# 18. REQUIRED APPLICATION ROUTES
+
+Implement functional routes:
+
+- `/` — Landing page
+- `/signup` — Open registration
+- `/login` — Login
+- `/verify-email` — Email verification
+- `/forgot-password` — Password reset request
+- `/dashboard` — Individual dashboard
+- `/today` — Daily challenge
+- `/questions` — Question Bank
+- `/roadmap` — Topic progression
+- `/progress` — Personal analytics
+- `/calendar` — Activity calendar
+- `/settings` — Account and reminder settings
+- `/profile` — User profile
+- `/admin` — Protected admin dashboard
+- `/admin/questions` — Question import and validation
+- `/admin/emails` — Email delivery monitoring
+
+Protect all private routes.
+
+Redirect unauthenticated users to login.
+
+Allow new visitors to access the landing page and signup page.
+
+---
+
+# 19. AUTOMATED TESTING
+
+Test the actual multi-user functionality.
+
+### Registration tests
+
+- First user can register.
+- Second user can register.
+- Third user can register.
+- Multiple additional users can register.
+- No fixed account limit exists.
+- Duplicate email registration is prevented.
+- Email verification works.
+- Each user receives a separate profile.
+- Each user automatically receives reminder settings.
+
+### Email tests
+
+- Every eligible registered user is included in reminder processing.
+- Emails are sent to the correct registered email addresses.
+- Every email contains that user's own questions.
+- Every email contains correct LeetCode links.
+- Pending questions are included.
+- Reminder time is 10 PM IST.
+- Browser closure does not stop email delivery.
+- Logged-out users still receive reminders.
+- Duplicate email delivery is prevented.
+- Failed deliveries are logged and retryable.
+- Reminder preferences are respected.
+
+### User isolation tests
+
+Create at least three test accounts.
+
+Verify:
+
+- User A's progress is independent.
+- User B's progress is independent.
+- User C's progress is independent.
+- User A cannot edit User B's records.
+- User B cannot access User C's private email history.
+- All three receive separate daily assignments.
+- All three can progress through different topics.
+
+### Question tests
+
+- At least 400 unique Easy questions exist.
+- No duplicate LeetCode IDs exist.
+- No Medium or Hard questions are included.
+- Every question has an individual valid URL.
+- Premium labels are correct.
+- Topic associations are valid.
+
+### Daily challenge tests
+
+- Five questions are assigned when possible.
+- Assignments remain stable after refresh.
+- Pending questions carry forward.
+- Completed questions are not reassigned.
+- Users have independent assignments.
+
+### Progress tests
+
+- Manual completion works.
+- Unchecking updates progress.
+- Topic completion is correct.
+- Topic unlocking is correct.
+- Streak calculations use IST.
+- Analytics reflect actual data.
+
+### UI tests
+
+- All routes work.
+- Signup and login work.
+- Search works.
+- Filters work.
+- Mobile layout works.
+- No broken links.
+- No fake buttons.
+- No placeholder statistics.
+
+---
+
+# 20. IMPLEMENTATION PHASES
+
+Build the project in the following order.
+
+### Phase 1: Application redesign
+
+- Rename the application to CodeOrbit.
+- Replace all DSA Duo branding.
+- Create the new design system.
+- Build the landing page.
+- Build signup and login pages.
+- Create responsive navigation.
+
+### Phase 2: Multi-user authentication
+
+- Configure Supabase Authentication.
+- Enable public signup.
+- Implement email verification.
+- Create profiles automatically.
+- Remove all two-user restrictions.
+- Remove approved-user allowlists.
+- Create individual user records.
+- Implement RLS.
+
+### Phase 3: Question collection
+
+- Inspect the datasets.
+- Import verified Easy questions.
+- Deduplicate by LeetCode ID.
+- Validate URLs and metadata.
+- Associate topics.
+- Reach at least 400 unique Easy questions.
+- Build the import dashboard.
+
+### Phase 4: DSA practice functionality
+
+- Implement Question Bank.
+- Implement daily assignments.
+- Implement manual completion.
+- Implement pending carry-forward.
+- Implement topic locking and unlocking.
+
+### Phase 5: Individual analytics
+
+- Build personal dashboard.
+- Implement streaks.
+- Build activity charts.
+- Build monthly calendar.
+- Implement topic-wise progress.
+
+### Phase 6: Automatic email system
+
+- Integrate Resend.
+- Automatically register every verified user's email.
+- Create reminder settings automatically.
+- Implement scheduled Edge Function.
+- Configure 10 PM IST scheduling.
+- Process all eligible users.
+- Implement personalized emails.
+- Implement delivery logs.
+- Implement safe retries.
+- Test with multiple accounts.
+
+### Phase 7: Final testing
+
+- Test at least three separate accounts.
+- Test public registration.
+- Test user data isolation.
+- Verify 400+ questions.
+- Test email delivery.
+- Test scheduler execution.
+- Test mobile responsiveness.
+- Fix all errors.
+
+---
+
+# 21. FINAL ACCEPTANCE CRITERIA
+
+The project is complete only when the following requirements are satisfied.
+
+1. Application name is CodeOrbit everywhere.
+2. Anyone can register.
+3. There is no two-user restriction.
+4. There is no fixed email allowlist.
+5. Every verified signup automatically creates a personal profile.
+6. Every verified signup automatically registers their email for daily reminders.
+7. At least 400 unique verified LeetCode Easy questions are available.
+8. Every question has its own individual clickable URL.
+9. Questions are organized into DSA topics.
+10. Each user receives independent daily questions.
+11. Five questions are assigned daily when possible.
+12. Pending questions carry forward.
+13. Manual completion updates the database.
+14. Topic progression works independently.
+15. Personal dashboards display real statistics.
+16. Streaks work correctly.
+17. Every eligible registered user receives a separate personalized email at 10 PM IST.
+18. Email reminders continue even when users are logged out.
+19. No email addresses are hardcoded.
+20. Email processing supports unlimited registered accounts through reliable batch processing.
+21. Duplicate email delivery is prevented.
+22. Reminder settings work.
+23. Supabase RLS protects user data.
+24. The admin panel is protected.
+25. The complete application works on desktop and mobile.
+
+---
+
+# 22. CRITICAL INSTRUCTIONS — DO NOT IGNORE
+
+**REMOVE THE OLD TWO-MEMBER SYSTEM COMPLETELY.**
+
+Search the entire existing codebase for:
+
+- DSA Duo
+- Two-user restrictions
+- Two-member registration
+- Friend-only authentication
+- Approved-user allowlists
+- Hardcoded email addresses
+- Fixed two-user comparison
+- Two-user reminder loops
+
+Replace or remove the obsolete functionality.
+
+**NEW SYSTEM:**
+
+- Unlimited users.
+- Open registration.
+- Individual user accounts.
+- Automatic email registration.
+- Automatic personalized daily reminders for every eligible registered user.
+- Independent DSA practice and progress.
+
+Do not create separate reminder registration forms.
+
+Do not ask administrators to manually add each new user's email.
+
+Do not hardcode two email addresses.
+
+Do not send reminders only to predefined accounts.
+
+Do not use browser-based email scheduling.
+
+Do not fabricate question records.
+
+Do not use fake statistics.
+
+Do not claim successful email delivery without actual provider confirmation.
+
+Do not leave important buttons nonfunctional.
+
+Do not stop after designing the frontend.
+
+**IMPORTANT DEVELOPMENT INSTRUCTION:**
+
+If an existing CodeOrbit/DSA Duo project already exists, inspect the existing repository first. Preserve working features and existing integrations wherever possible. Modify the current codebase rather than unnecessarily rebuilding everything.
+
+Do not overwrite unrelated working files.
+
+Before making changes, inspect the existing frontend, backend, database schema, authentication configuration and environment variables.
+
+Implement the new multi-user architecture carefully.
+
+After implementation, provide:
+- Files changed.
+- Database migrations created.
+- Environment variables required.
+- Supabase configuration instructions.
+- Resend configuration instructions.
+- Scheduler configuration.
+- Local development commands.
+- Testing results.
+- Any remaining configuration needed.
+
+**FINAL GOAL:**
+
+Build CodeOrbit into a complete, reliable, premium-quality multi-user DSA practice platform where ANYONE can sign up, automatically receive their own daily coding questions, track their personal DSA journey, and receive their own personalized daily email reminder at 10:00 PM IST without any manual email registration.

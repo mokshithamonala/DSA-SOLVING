@@ -1,0 +1,6 @@
+{
+  "name": "CodeOrbit",
+  "description": "Your Daily DSA Practice Platform with 400+ verified LeetCode Easy questions, personalized daily challenges, streak tracking, and automated reminders.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
