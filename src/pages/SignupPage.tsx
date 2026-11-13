@@ -101,7 +101,7 @@ export const SignupPage: React.FC = () => {
                 className="mt-1 block w-full rounded-md bg-slate-950 border border-slate-800 px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
               <span className="block mt-1 text-[11px] text-slate-500">
-                Automatically enrolled for daily 10:00 PM IST reminders.
+                Email saved automatically for daily 1:00 PM, 5:30 PM & 10:00 PM IST reminders.
               </span>
             </div>
 
@@ -163,7 +163,7 @@ export const SignupPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <BellRing className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span>Automated 10:00 PM IST email reminders enabled</span>
+              <span>Instant welcome journey email + 1:00 PM, 5:30 PM & 10:00 PM IST reminders</span>
             </div>
           </div>
 

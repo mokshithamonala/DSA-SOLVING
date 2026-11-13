@@ -20,8 +20,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import confetti from 'canvas-confetti';
 
 export const DashboardPage: React.FC = () => {
-  const { user } = useAuth();
-  const [updateTrigger, setUpdateTrigger] = useState(0);
+  const { user, dataVersion } = useAuth();
+  const [, setUpdateTrigger] = useState(0);
 
   if (!user) return null;
 
@@ -239,7 +239,7 @@ export const DashboardPage: React.FC = () => {
 
                           {item.assignment_type === 'carried_forward' && (
                             <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
-                              Carried Forward
+                              Carried Forward{item.original_date ? ` (${item.original_date})` : ''}
                             </span>
                           )}
 
@@ -380,15 +380,15 @@ export const DashboardPage: React.FC = () => {
                 <span className="text-slate-400">Timezone:</span>
                 <span className="text-slate-200 font-mono">Asia/Kolkata</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Scheduled Time:</span>
-                <span className="text-sky-400 font-bold font-mono">10:00 PM IST</span>
+              <div className="flex justify-between gap-2">
+                <span className="text-slate-400 shrink-0">Daily Slots:</span>
+                <span className="text-sky-400 font-bold font-mono text-right">1:00 PM · 5:30 PM · 10:00 PM IST</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Status:</span>
-                <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                <span className={`font-semibold flex items-center gap-1 ${reminderSettings.reminders_enabled ? 'text-emerald-400' : 'text-slate-400'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  Active
+                  {reminderSettings.reminders_enabled ? 'Active (Auto-Enrolled)' : 'Paused'}
                 </span>
               </div>
             </div>

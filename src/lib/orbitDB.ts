@@ -1,34 +1,61 @@
 /**
- * CodeOrbit Relational Data Engine & State Store
+ * CodeOrbit Relational Data Engine & Server-Synchronized State Store
  * Implements strict user isolation, 400+ verified question management,
- * daily 5-question assignments with carry-forward, topic unlocking,
- * streak calculations in Asia/Kolkata, and automated reminder distribution.
+ * daily 5-question assignments with carry-forward + top-up to 5, topic unlocking,
+ * streak calculations in Asia/Kolkata, and automated 3x-daily IST reminder distribution.
  */
 
 import { QUESTIONS_DATA, VERIFIED_QUESTIONS_STATS } from '../data/questionsData';
 import { TOPICS_DATA } from '../data/topicsData';
-import { 
-  UserProfile, 
-  Question, 
-  Topic, 
-  UserTopicProgress, 
-  DailyAssignment, 
-  UserStreak, 
-  ReminderSettings, 
-  EmailLog 
+import {
+  UserProfile,
+  Question,
+  Topic,
+  UserTopicProgress,
+  DailyAssignment,
+  UserStreak,
+  ReminderSettings,
+  EmailLog
 } from '../types';
 
 const STORAGE_KEYS = {
   USERS: 'codeorbit_users_v2',
   CURRENT_USER_ID: 'codeorbit_active_user_id_v2',
-  SOLVED_MAP: 'codeorbit_solved_map_v2', // { [userId]: { [questionId]: { solved: boolean, solved_at: string } } }
-  TOPIC_PROGRESS: 'codeorbit_topic_progress_v2', // { [userId]: { [topicId]: UserTopicProgress } }
-  DAILY_ASSIGNMENTS: 'codeorbit_daily_assignments_v2', // { [userId]: DailyAssignment[] }
-  STREAKS: 'codeorbit_streaks_v2', // { [userId]: UserStreak }
-  REMINDER_SETTINGS: 'codeorbit_reminders_v2', // { [userId]: ReminderSettings }
-  EMAIL_LOGS: 'codeorbit_email_logs_v2', // EmailLog[]
+  SOLVED_MAP: 'codeorbit_solved_map_v2',
+  TOPIC_PROGRESS: 'codeorbit_topic_progress_v2',
+  DAILY_ASSIGNMENTS: 'codeorbit_daily_assignments_v2',
+  STREAKS: 'codeorbit_streaks_v2',
+  REMINDER_SETTINGS: 'codeorbit_reminders_v2',
+  EMAIL_LOGS: 'codeorbit_email_logs_v2',
   RESEND_KEY: 'codeorbit_resend_api_key_v2'
 };
+
+export const DEFAULT_REMINDER_SLOTS = ['13:00', '17:30', '22:00'] as const;
+
+export const REMINDER_SLOT_META = [
+  { slot: '13:00', label: '1:00 PM IST', shortLabel: '1:00 PM' },
+  { slot: '17:30', label: '5:30 PM IST', shortLabel: '5:30 PM' },
+  { slot: '22:00', label: '10:00 PM IST', shortLabel: '10:00 PM' }
+] as const;
+
+export interface MailProviderStatus {
+  smtpConfigured: boolean;
+  smtpUser: string;
+  smtpHost: string;
+  resendConfigured: boolean;
+  resendCustomDomain: boolean;
+  resendFromEmail: string;
+}
+
+export interface ServerUserState {
+  user: UserProfile;
+  solvedMap: Record<string, { is_solved: boolean; solved_at: string }>;
+  topicProgress: Record<string, UserTopicProgress>;
+  dailyAssignments: DailyAssignment[];
+  streak: UserStreak;
+  reminderSettings: ReminderSettings;
+  emailLogs: EmailLog[];
+}
 
 // Helper: Get today's date formatted as YYYY-MM-DD in Asia/Kolkata
 export function getKolkataDateString(offsetDays: number = 0): string {
@@ -45,14 +72,14 @@ export function getKolkataDateString(offsetDays: number = 0): string {
   return formatter.format(date);
 }
 
-// Initial Seed Users: Primary user, 2 practice users for testing user isolation, and 1 Admin
+// Initial Seed Users
 const SEED_USERS: (UserProfile & { passwordHash: string })[] = [
   {
     id: 'user-sai-001',
     full_name: 'Sai Mokshitha',
     email: 'saimokshitha478@gmail.com',
     role: 'user',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+    avatar_url: 'https://api.dicebear.com/7.x/initials/svg?seed=Sai%20Mokshitha',
     created_at: '2026-11-01T00:00:00.000Z',
     passwordHash: 'password123'
   },
@@ -61,7 +88,7 @@ const SEED_USERS: (UserProfile & { passwordHash: string })[] = [
     full_name: 'Alex Chen',
     email: 'alex@codeorbit.dev',
     role: 'user',
-    avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
+    avatar_url: 'https://api.dicebear.com/7.x/initials/svg?seed=Alex%20Chen',
     created_at: '2026-11-05T00:00:00.000Z',
     passwordHash: 'password123'
   },
@@ -70,7 +97,7 @@ const SEED_USERS: (UserProfile & { passwordHash: string })[] = [
     full_name: 'Maya Patel',
     email: 'maya@codeorbit.dev',
     role: 'user',
-    avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
+    avatar_url: 'https://api.dicebear.com/7.x/initials/svg?seed=Maya%20Patel',
     created_at: '2026-11-08T00:00:00.000Z',
     passwordHash: 'password123'
   },
@@ -79,14 +106,16 @@ const SEED_USERS: (UserProfile & { passwordHash: string })[] = [
     full_name: 'Platform Administrator',
     email: 'admin@codeorbit.dev',
     role: 'admin',
-    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+    avatar_url: 'https://api.dicebear.com/7.x/initials/svg?seed=Admin',
     created_at: '2026-11-01T00:00:00.000Z',
     passwordHash: 'password123'
   }
 ];
 
+type Listener = () => void;
+
 class OrbitDataStore {
-  private users: (UserProfile & { passwordHash: string })[] = [];
+  private users: (UserProfile & { passwordHash?: string })[] = [];
   private activeUserId: string | null = null;
   private solvedMap: Record<string, Record<string, { is_solved: boolean; solved_at: string }>> = {};
   private topicProgressMap: Record<string, Record<string, UserTopicProgress>> = {};
@@ -95,9 +124,33 @@ class OrbitDataStore {
   private reminderSettingsMap: Record<string, ReminderSettings> = {};
   private emailLogs: EmailLog[] = [];
   private resendApiKey: string = '';
+  private listeners: Set<Listener> = new Set();
+  private version: number = 0;
 
   constructor() {
     this.init();
+  }
+
+  public subscribe(listener: Listener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  public getVersion(): number {
+    return this.version;
+  }
+
+  private notify() {
+    this.version += 1;
+    this.listeners.forEach(fn => {
+      try {
+        fn();
+      } catch {
+        // ignore listener errors
+      }
+    });
   }
 
   private init() {
@@ -105,7 +158,6 @@ class OrbitDataStore {
       const storedUsers = localStorage.getItem(STORAGE_KEYS.USERS);
       if (storedUsers) {
         this.users = JSON.parse(storedUsers);
-        // Ensure all seed users exist in stored list
         for (const seed of SEED_USERS) {
           if (!this.users.some(u => u.id === seed.id || u.email.toLowerCase() === seed.email.toLowerCase())) {
             this.users.unshift(seed);
@@ -117,7 +169,7 @@ class OrbitDataStore {
         this.persistUsers();
       }
 
-      this.activeUserId = localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID) || this.users[0]?.id || this.users[1]?.id;
+      this.activeUserId = localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID) || null;
 
       const storedSolved = localStorage.getItem(STORAGE_KEYS.SOLVED_MAP);
       this.solvedMap = storedSolved ? JSON.parse(storedSolved) : {};
@@ -139,47 +191,157 @@ class OrbitDataStore {
 
       this.resendApiKey = localStorage.getItem(STORAGE_KEYS.RESEND_KEY) || '';
 
-      // Ensure every user has initialized default structures
       for (const u of this.users) {
         this.ensureUserInitialized(u.id, u.email);
       }
     } catch (e) {
       console.error('Failed to initialize OrbitDataStore', e);
       this.users = [...SEED_USERS];
-      this.activeUserId = this.users[1].id;
     }
   }
 
-  // Ensure default structures are present for a user
+  // Hydrate full state returned from server for a given user
+  private applyServerState(state: ServerUserState, serverUsers?: UserProfile[]) {
+    if (serverUsers && Array.isArray(serverUsers)) {
+      this.mergeServerUsers(serverUsers);
+    }
+    if (!state || !state.user) return;
+
+    const uid = state.user.id;
+    this.mergeServerUsers([state.user]);
+
+    this.solvedMap[uid] = state.solvedMap || {};
+    this.topicProgressMap[uid] = state.topicProgress || {};
+    this.dailyAssignmentsMap[uid] = state.dailyAssignments || [];
+    if (state.streak) {
+      this.streaksMap[uid] = state.streak;
+    }
+    if (state.reminderSettings) {
+      this.reminderSettingsMap[uid] = state.reminderSettings;
+    }
+    if (Array.isArray(state.emailLogs)) {
+      const otherLogs = this.emailLogs.filter(l => l.user_id !== uid);
+      this.emailLogs = [...state.emailLogs, ...otherLogs].sort(
+        (a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
+      );
+      this.persistEmailLogs();
+    }
+
+    this.persistSolved();
+    this.persistTopicProgress();
+    this.persistDailyAssignments();
+    this.persistStreaks();
+    this.persistReminders();
+    this.notify();
+  }
+
+  private mergeServerUsers(serverUsers: UserProfile[]) {
+    let changed = false;
+    for (const su of serverUsers) {
+      const idx = this.users.findIndex(
+        u => u.id === su.id || u.email.toLowerCase() === su.email.toLowerCase()
+      );
+      if (idx === -1) {
+        this.users.push({ ...su });
+        changed = true;
+      } else {
+        this.users[idx] = { ...this.users[idx], ...su };
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.persistUsers();
+    }
+  }
+
+  // Called on app mount to synchronize users & active user state with server DB
+  public async bootstrapFromServer(): Promise<void> {
+    try {
+      const res = await fetch('/api/bootstrap');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.users)) {
+          this.mergeServerUsers(data.users);
+        }
+      }
+
+      if (this.activeUserId) {
+        await this.hydrateUserFromServer(this.activeUserId);
+      } else {
+        this.notify();
+      }
+    } catch {
+      // Offline / dev boot fallback
+    }
+  }
+
+  public async hydrateUserFromServer(userId: string): Promise<void> {
+    try {
+      const localUser = this.users.find(u => u.id === userId);
+      const res = await fetch(`/api/users/${encodeURIComponent(userId)}/state`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.state) {
+          this.applyServerState(data.state);
+          return;
+        }
+      }
+
+      // If user existed locally before server knew about them, sync them now!
+      if (localUser && localUser.email) {
+        const syncRes = await fetch('/api/auth/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: localUser.id,
+            email: localUser.email,
+            full_name: localUser.full_name,
+            role: localUser.role
+          })
+        });
+        if (syncRes.ok) {
+          const syncData = await syncRes.json();
+          if (syncData.state) {
+            this.applyServerState(syncData.state, syncData.users);
+          }
+        }
+      }
+    } catch {
+      // ignore transient network errors
+    }
+  }
+
   public ensureUserInitialized(userId: string, email: string) {
-    // 1. Streak
     if (!this.streaksMap[userId]) {
       this.streaksMap[userId] = {
         user_id: userId,
-        current_streak: 1,
-        longest_streak: 3,
-        last_activity_date: getKolkataDateString()
+        current_streak: 0,
+        longest_streak: 0,
+        last_activity_date: undefined
       };
       this.persistStreaks();
     }
 
-    // 2. Reminder Settings (MANDATORY: automatically enabled, Asia/Kolkata, 22:00)
-    if (!this.reminderSettingsMap[userId]) {
+    const existingReminder = this.reminderSettingsMap[userId];
+    if (!existingReminder) {
       this.reminderSettingsMap[userId] = {
         user_id: userId,
-        email: email,
+        email,
         reminders_enabled: true,
         timezone: 'Asia/Kolkata',
-        reminder_time: '22:00',
+        reminder_time: '13:00, 17:30, 22:00',
+        reminder_slots: [...DEFAULT_REMINDER_SLOTS],
         updated_at: new Date().toISOString()
       };
       this.persistReminders();
+    } else if (!existingReminder.reminder_slots || existingReminder.reminder_slots.length === 0) {
+      existingReminder.reminder_slots = [...DEFAULT_REMINDER_SLOTS];
+      existingReminder.reminder_time = '13:00, 17:30, 22:00';
+      this.persistReminders();
     }
 
-    // 3. User Solved Map
     if (!this.solvedMap[userId]) {
       this.solvedMap[userId] = {};
-      // For seed user Alex, pre-mark 4 questions as solved for realistic dashboard demo
       if (userId === 'user-alex-002') {
         this.solvedMap[userId]['q-1'] = { is_solved: true, solved_at: new Date().toISOString() };
         this.solvedMap[userId]['q-26'] = { is_solved: true, solved_at: new Date().toISOString() };
@@ -188,7 +350,6 @@ class OrbitDataStore {
       this.persistSolved();
     }
 
-    // 4. Topic Progress
     if (!this.topicProgressMap[userId]) {
       this.topicProgressMap[userId] = {};
       TOPICS_DATA.forEach((topic, idx) => {
@@ -196,7 +357,7 @@ class OrbitDataStore {
         const solvedCount = topicQuestions.filter(q => this.solvedMap[userId]?.[q.id]?.is_solved).length;
         this.topicProgressMap[userId][topic.id] = {
           topic_id: topic.id,
-          status: idx === 0 ? 'active' : 'locked', // First topic ('Arrays') is active, others locked
+          status: idx === 0 ? 'active' : 'locked',
           total_questions: topicQuestions.length,
           solved_questions: solvedCount,
           unlocked_at: idx === 0 ? new Date().toISOString() : undefined,
@@ -206,7 +367,6 @@ class OrbitDataStore {
       this.persistTopicProgress();
     }
 
-    // 5. Daily Assignments (Generate if not present)
     if (!this.dailyAssignmentsMap[userId] || this.dailyAssignmentsMap[userId].length === 0) {
       this.generateDailyAssignments(userId);
     }
@@ -231,7 +391,73 @@ class OrbitDataStore {
     this.activeUserId = userId;
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, userId);
     this.ensureUserInitialized(user.id, user.email);
+    this.notify();
+    void this.hydrateUserFromServer(user.id);
     return this.getActiveUser();
+  }
+
+  public async registerUserAsync(fullName: string, email: string, password: string): Promise<{ user: UserProfile }> {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fullName, email: normalizedEmail, password })
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Registration failed.');
+    }
+
+    const serverUser: UserProfile = data.user;
+    this.activeUserId = serverUser.id;
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, serverUser.id);
+    this.applyServerState(data.state, data.users);
+    return { user: serverUser };
+  }
+
+  public async loginUserAsync(email: string, password: string): Promise<{ user: UserProfile }> {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normalizedEmail, password })
+    });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      const serverUser: UserProfile = data.user;
+      this.activeUserId = serverUser.id;
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, serverUser.id);
+      this.applyServerState(data.state, data.users);
+      return { user: serverUser };
+    }
+
+    // Fallback: if account was created locally earlier with matching password, sync it to server!
+    const localMatch = this.users.find(u => u.email.toLowerCase() === normalizedEmail);
+    if (localMatch && localMatch.passwordHash === password) {
+      const syncRes = await fetch('/api/auth/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: localMatch.id,
+          email: localMatch.email,
+          full_name: localMatch.full_name,
+          role: localMatch.role
+        })
+      });
+      const syncData = await syncRes.json();
+      if (syncRes.ok && syncData.success) {
+        this.activeUserId = syncData.user.id;
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, syncData.user.id);
+        this.applyServerState(syncData.state, syncData.users);
+        return { user: syncData.user };
+      }
+    }
+
+    throw new Error(data.error || 'Invalid email or password.');
   }
 
   public registerUser(fullName: string, email: string, password: string): { user: UserProfile } {
@@ -242,7 +468,7 @@ class OrbitDataStore {
     }
 
     const newUser: UserProfile & { passwordHash: string } = {
-      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       full_name: fullName.trim(),
       email: normalizedEmail,
       role: 'user',
@@ -253,13 +479,16 @@ class OrbitDataStore {
 
     this.users.push(newUser);
     this.persistUsers();
-
-    // Automatically initialize user records
     this.ensureUserInitialized(newUser.id, newUser.email);
-
-    // Set as active user
     this.activeUserId = newUser.id;
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, newUser.id);
+    this.notify();
+
+    void fetch('/api/auth/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: newUser.id, email: newUser.email, full_name: newUser.full_name, role: newUser.role })
+    });
 
     const { passwordHash, ...safeUser } = newUser;
     return { user: safeUser };
@@ -271,30 +500,59 @@ class OrbitDataStore {
     if (!user) {
       throw new Error('No account found with this email address.');
     }
-    if (user.passwordHash !== password) {
+    if (user.passwordHash && user.passwordHash !== password) {
       throw new Error('Invalid password. Please check your credentials.');
     }
 
     this.activeUserId = user.id;
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, user.id);
     this.ensureUserInitialized(user.id, user.email);
+    this.notify();
+    void this.hydrateUserFromServer(user.id);
 
     const { passwordHash, ...safeUser } = user;
     return { user: safeUser };
   }
 
   public logoutUser(): void {
-    // When logged out, clear active session
     this.activeUserId = null;
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER_ID);
+    this.notify();
   }
 
   public updateProfile(userId: string, data: Partial<UserProfile>): UserProfile {
     const user = this.users.find(u => u.id === userId);
     if (!user) throw new Error('User not found');
-    if (data.full_name) user.full_name = data.full_name;
+    if (data.full_name) user.full_name = data.full_name.trim();
     if (data.avatar_url) user.avatar_url = data.avatar_url;
+    if (data.email) {
+      const normalized = data.email.trim().toLowerCase();
+      user.email = normalized;
+      if (this.reminderSettingsMap[userId]) {
+        this.reminderSettingsMap[userId].email = normalized;
+        this.persistReminders();
+      }
+    }
     this.persistUsers();
+    this.notify();
+
+    void fetch(`/api/users/${encodeURIComponent(userId)}/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        full_name: data.full_name,
+        email: data.email,
+        avatar_url: data.avatar_url
+      })
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (d?.success && d.state) {
+          this.applyServerState(d.state);
+        }
+      })
+      .catch(() => {});
+
     const { passwordHash, ...safeUser } = user;
     return safeUser;
   }
@@ -344,70 +602,102 @@ class OrbitDataStore {
       const topic = this.getTopicById(activeEntry.topic_id);
       if (topic) return topic;
     }
-    return TOPICS_DATA[0]; // Arrays by default
+    return TOPICS_DATA[0];
   }
 
-  // --- Daily 5-Question Challenge & Carry-Forward Engine ---
+  // --- Daily 5-Question Challenge & Carry-Forward + Top-Up Engine ---
   public getDailyAssignments(userId: string): DailyAssignment[] {
     const today = getKolkataDateString();
-    const userAssignments = this.dailyAssignmentsMap[userId] || [];
+    const existing = this.dailyAssignmentsMap[userId] || [];
+    const hasOutdatedDate = existing.some(a => a.assignment_date < today);
 
-    // Check if we need to reconcile or generate today's batch
-    const hasTodayOrPending = userAssignments.length > 0;
-    if (!hasTodayOrPending) {
-      return this.generateDailyAssignments(userId);
+    if (existing.length === 0 || hasOutdatedDate) {
+      return this.generateDailyAssignments(userId, false);
     }
 
-    // Attach full question details
-    return userAssignments.map(a => ({
+    return existing.map(a => ({
       ...a,
-      question: this.getQuestionById(a.question_id)
+      question: a.question || this.getQuestionById(a.question_id)
     }));
   }
 
-  public generateDailyAssignments(userId: string): DailyAssignment[] {
+  /**
+   * Carry-Forward + Top-Up Rule:
+   * - Any pending questions from previous days roll forward as 'carried_forward' (preserving original_date).
+   * - Today's completed questions stay visible unless forceNextBatch is true.
+   * - If active workload < 5, add new unsolved questions from active topic to reach 5!
+   */
+  public generateDailyAssignments(userId: string, forceNextBatch: boolean = false): DailyAssignment[] {
     const today = getKolkataDateString();
     const existing = this.dailyAssignmentsMap[userId] || [];
-
-    // Step 1: Find any unfinished questions from past days (CARRY-FORWARD)
-    const pendingQuestions = existing.filter(a => a.status === 'pending');
-
-    // If user has pending workload, preserve ALL of them as carried forward
-    if (pendingQuestions.length > 0) {
-      const carried = pendingQuestions.map(a => ({
-        ...a,
-        assignment_type: 'carried_forward' as const,
-        question: this.getQuestionById(a.question_id)
-      }));
-      this.dailyAssignmentsMap[userId] = carried;
-      this.persistDailyAssignments();
-      return carried;
-    }
-
-    // Step 2: If no pending questions exist, assign up to 5 NEW questions from the active topic
-    const activeTopic = this.getActiveTopic(userId);
-    const topicQuestions = this.getQuestionsForTopic(activeTopic.id);
     const solvedSet = this.solvedMap[userId] || {};
 
-    // Filter unsolved questions in this topic that haven't been completed
-    const unsolvedInTopic = topicQuestions.filter(q => !solvedSet[q.id]?.is_solved);
+    const activeList: DailyAssignment[] = [];
 
-    // Pick up to 5 questions
-    const selectedBatch = unsolvedInTopic.slice(0, 5);
+    for (const a of existing) {
+      const isSolved = Boolean(solvedSet[a.question_id]?.is_solved) || a.status === 'completed';
+      if (!isSolved) {
+        if (a.assignment_date < today) {
+          activeList.push({
+            ...a,
+            original_date: a.original_date || a.assignment_date,
+            assignment_date: today,
+            assignment_type: 'carried_forward',
+            status: 'pending',
+            question: this.getQuestionById(a.question_id)
+          });
+        } else {
+          activeList.push({
+            ...a,
+            status: 'pending',
+            question: this.getQuestionById(a.question_id)
+          });
+        }
+      } else if (a.assignment_date === today && !forceNextBatch) {
+        activeList.push({
+          ...a,
+          status: 'completed',
+          question: this.getQuestionById(a.question_id)
+        });
+      }
+    }
 
-    const newAssignments: DailyAssignment[] = selectedBatch.map((q, idx) => ({
-      id: `assign-${userId}-${today}-${q.id}-${idx}`,
-      user_id: userId,
-      question_id: q.id,
-      assignment_date: today,
-      assignment_type: 'new' as const,
-      status: 'pending' as const,
-      question: q
-    }));
+    const needed = Math.max(0, 5 - activeList.length);
+    if (needed > 0) {
+      const activeTopic = this.getActiveTopic(userId);
+      const topicQuestions = this.getQuestionsForTopic(activeTopic.id);
+      const alreadyIds = new Set(activeList.map(a => a.question_id));
+      const candidates = topicQuestions.filter(q => !solvedSet[q.id]?.is_solved && !alreadyIds.has(q.id));
 
-    this.dailyAssignmentsMap[userId] = newAssignments;
+      candidates.slice(0, needed).forEach((q, idx) => {
+        activeList.push({
+          id: `assign-${userId}-${today}-${q.id}-${Date.now()}-${idx}`,
+          user_id: userId,
+          question_id: q.id,
+          assignment_date: today,
+          original_date: today,
+          assignment_type: 'new',
+          status: 'pending',
+          question: q
+        });
+      });
+    }
+
+    this.dailyAssignmentsMap[userId] = activeList;
     this.persistDailyAssignments();
-    return newAssignments;
+
+    if (forceNextBatch) {
+      void fetch(`/api/users/${encodeURIComponent(userId)}/next-batch`, { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+          if (d?.success && d.state) {
+            this.applyServerState(d.state);
+          }
+        })
+        .catch(() => {});
+    }
+
+    return activeList;
   }
 
   // --- Manual Question Completion & Streak Calculation ---
@@ -428,7 +718,6 @@ class OrbitDataStore {
 
     this.persistSolved();
 
-    // Update Daily Assignment status if this question is part of the daily challenge
     const assignments = this.dailyAssignmentsMap[userId] || [];
     let updatedAssignment = false;
     for (const a of assignments) {
@@ -442,8 +731,22 @@ class OrbitDataStore {
       this.persistDailyAssignments();
     }
 
-    // Recalculate topic progress and unlock next topic if completed
     this.recalculateTopicProgress(userId);
+    this.notify();
+
+    // Persist on backend so scheduled reminder emails always reflect exact solved/pending state
+    void fetch(`/api/users/${encodeURIComponent(userId)}/toggle-question`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId })
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (d?.success && d.state) {
+          this.applyServerState(d.state);
+        }
+      })
+      .catch(() => {});
 
     return nowSolved;
   }
@@ -462,7 +765,6 @@ class OrbitDataStore {
     };
 
     if (streak.last_activity_date === today) {
-      // Already solved one or more today, streak day confirmed
       return;
     }
 
@@ -486,7 +788,6 @@ class OrbitDataStore {
   private recalculateTopicProgress(userId: string) {
     const userTopics = this.topicProgressMap[userId] || {};
     const solvedSet = this.solvedMap[userId] || {};
-
     let shouldUnlockNext = false;
 
     for (let i = 0; i < TOPICS_DATA.length; i++) {
@@ -510,7 +811,6 @@ class OrbitDataStore {
         shouldUnlockNext = false;
       }
 
-      // If active and 100% completed, mark completed and signal next topic unlock!
       if (currentProg.status === 'active' && questions.length > 0 && solvedInTopic >= questions.length) {
         currentProg.status = 'completed';
         currentProg.completed_at = new Date().toISOString();
@@ -526,12 +826,14 @@ class OrbitDataStore {
 
   // --- Streaks & Stats ---
   public getUserStreak(userId: string): UserStreak {
-    return this.streaksMap[userId] || {
-      user_id: userId,
-      current_streak: 0,
-      longest_streak: 0,
-      last_activity_date: undefined
-    };
+    return (
+      this.streaksMap[userId] || {
+        user_id: userId,
+        current_streak: 0,
+        longest_streak: 0,
+        last_activity_date: undefined
+      }
+    );
   }
 
   public getUserStats(userId: string) {
@@ -547,6 +849,7 @@ class OrbitDataStore {
 
     const assignments = this.getDailyAssignments(userId);
     const pendingCount = assignments.filter(a => a.status === 'pending').length;
+    const carriedForwardCount = assignments.filter(a => a.assignment_type === 'carried_forward').length;
     const solvedToday = assignments.filter(a => a.status === 'completed').length;
 
     const topicProgress = this.getUserTopicProgress(userId);
@@ -557,6 +860,7 @@ class OrbitDataStore {
       totalAvailable,
       completionPercentage,
       pendingCount,
+      carriedForwardCount,
       solvedToday,
       currentStreak: streak.current_streak,
       longestStreak: streak.longest_streak,
@@ -571,25 +875,47 @@ class OrbitDataStore {
   // --- Automated Daily Email Reminder System ---
   public getReminderSettings(userId: string): ReminderSettings {
     const user = this.users.find(u => u.id === userId);
-    return this.reminderSettingsMap[userId] || {
+    const existing = this.reminderSettingsMap[userId];
+    if (existing) {
+      return {
+        ...existing,
+        reminder_slots:
+          existing.reminder_slots && existing.reminder_slots.length > 0
+            ? existing.reminder_slots
+            : [...DEFAULT_REMINDER_SLOTS]
+      };
+    }
+    return {
       user_id: userId,
       email: user?.email || '',
       reminders_enabled: true,
       timezone: 'Asia/Kolkata',
-      reminder_time: '22:00',
+      reminder_time: '13:00, 17:30, 22:00',
+      reminder_slots: [...DEFAULT_REMINDER_SLOTS],
       updated_at: new Date().toISOString()
     };
   }
 
   public updateReminderSettings(userId: string, data: Partial<ReminderSettings>): ReminderSettings {
     const current = this.getReminderSettings(userId);
-    const updated = {
+    const nextSlots = data.reminder_slots || current.reminder_slots || [...DEFAULT_REMINDER_SLOTS];
+    const updated: ReminderSettings = {
       ...current,
       ...data,
+      reminder_slots: nextSlots,
+      reminder_time: nextSlots.join(', '),
       updated_at: new Date().toISOString()
     };
     this.reminderSettingsMap[userId] = updated;
     this.persistReminders();
+    this.notify();
+
+    void fetch(`/api/users/${encodeURIComponent(userId)}/reminders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated)
+    }).catch(() => {});
+
     return updated;
   }
 
@@ -610,141 +936,128 @@ class OrbitDataStore {
   }
 
   /**
-   * Run the 10:00 PM IST automated daily email reminder cycle for ALL eligible users
+   * Dispatch real personalized reminder emails via server /api/reminders/trigger
    */
-  public async triggerScheduledReminderCycle(forceTargetUserId?: string): Promise<{
+  public async triggerScheduledReminderCycle(
+    forceTargetUserId?: string,
+    slot: string = 'manual'
+  ): Promise<{
     processed: number;
     sent: number;
     failed: number;
     skippedDuplicates: number;
     logs: EmailLog[];
   }> {
-    const today = getKolkataDateString();
-    const eligibleUsers = this.users.filter(u => {
-      if (forceTargetUserId && u.id !== forceTargetUserId) return false;
-      const settings = this.getReminderSettings(u.id);
-      return settings.reminders_enabled;
+    const res = await fetch('/api/reminders/trigger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slot,
+        targetUserId: forceTargetUserId || undefined,
+        force: true,
+        resendApiKey: this.resendApiKey || undefined
+      })
     });
 
-    let sent = 0;
-    let failed = 0;
-    let skippedDuplicates = 0;
-    const newLogs: EmailLog[] = [];
-
-    for (const u of eligibleUsers) {
-      // Check duplicate delivery
-      const existingSuccess = this.emailLogs.find(
-        log => log.user_id === u.id && log.scheduled_date === today && log.delivery_status === 'sent'
-      );
-
-      if (existingSuccess && !forceTargetUserId) {
-        skippedDuplicates++;
-        continue;
-      }
-
-      const assignments = this.getDailyAssignments(u.id);
-      const pendingQuestions = assignments.filter(a => a.status === 'pending');
-      const solvedToday = assignments.filter(a => a.status === 'completed').length;
-      const streak = this.getUserStreak(u.id);
-      const activeTopic = this.getActiveTopic(u.id);
-      const stats = this.getUserStats(u.id);
-
-      // Construct actual email payload matching prompt Section 13 exactly
-      const emailSubject = `Your CodeOrbit Daily DSA Reminder — Today's Coding Challenge`;
-      const questionsText = assignments.map((a, i) => 
-        `${i + 1}. ${a.question?.title || 'Problem'}\n   LeetCode: ${a.question?.problem_url || ''}\n   Status: ${a.status === 'completed' ? 'Solved' : 'Pending'}`
-      ).join('\n\n');
-
-      const emailBody = `Hi ${u.full_name},
-
-Your daily CodeOrbit DSA practice reminder is here!
-
-Today's Topic: ${activeTopic.name}
-
-Today's Coding Questions:
-
-${questionsText}
-
-Your Progress
-- Completed today: ${solvedToday}
-- Pending questions: ${pendingQuestions.length}
-- Current streak: ${streak.current_streak} days
-- Overall progress: ${stats.completionPercentage}%
-
-Pending Questions:
-${pendingQuestions.length > 0 ? pendingQuestions.map(p => `- ${p.question?.title}: ${p.question?.problem_url}`).join('\n') : 'All daily questions completed! Great work!'}
-
-Keep going! Consistency is the key to becoming better at problem-solving.
-Open CodeOrbit and update your daily progress.
-
-Regards,
-CodeOrbit Team`;
-
-      let deliveryStatus: 'sent' | 'failed' = 'sent';
-      let errorMessage: string | undefined = undefined;
-
-      // Dispatch via server-side Resend proxy with secure backend key
-      try {
-        const res = await fetch('/api/send-email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            to: u.email,
-            subject: emailSubject,
-            text: emailBody,
-            apiKey: this.resendApiKey || undefined
-          })
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          deliveryStatus = 'failed';
-          errorMessage = data.error || 'Resend error';
-          failed++;
-        } else {
-          deliveryStatus = 'sent';
-          errorMessage = 'Delivered successfully via Resend API';
-          sent++;
-        }
-      } catch (e: any) {
-        // Fallback simulation when offline
-        deliveryStatus = 'sent';
-        errorMessage = 'Dispatched via CodeOrbit Automated Cron Dispatcher';
-        sent++;
-      }
-
-      const logEntry: EmailLog = {
-        id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-        user_id: u.id,
-        recipient_email: u.email,
-        email_type: 'daily_reminder',
-        scheduled_date: today,
-        sent_at: new Date().toISOString(),
-        delivery_status: deliveryStatus,
-        error_message: errorMessage
-      };
-
-      this.emailLogs.unshift(logEntry);
-      newLogs.push(logEntry);
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Failed to trigger reminder cycle');
     }
 
-    this.persistEmailLogs();
+    if (Array.isArray(data.logs)) {
+      const existingIds = new Set(this.emailLogs.map(l => l.id));
+      const newEntries = data.logs.filter((l: EmailLog) => !existingIds.has(l.id));
+      this.emailLogs = [...newEntries, ...this.emailLogs];
+      this.persistEmailLogs();
+    }
+
+    if (forceTargetUserId) {
+      await this.hydrateUserFromServer(forceTargetUserId);
+    } else {
+      this.notify();
+    }
 
     return {
-      processed: eligibleUsers.length,
-      sent,
-      failed,
-      skippedDuplicates,
-      logs: newLogs
+      processed: data.processed,
+      sent: data.sent,
+      failed: data.failed,
+      skippedDuplicates: data.skippedDuplicates,
+      logs: data.logs || []
     };
   }
 
-  public retryFailedEmail(logId: string): Promise<boolean> {
-    const log = this.emailLogs.find(l => l.id === logId);
-    if (!log) return Promise.resolve(false);
-    return this.triggerScheduledReminderCycle(log.user_id).then(res => res.sent > 0);
+  public async retryFailedEmail(logId: string): Promise<boolean> {
+    const res = await fetch(`/api/reminders/retry/${encodeURIComponent(logId)}`, {
+      method: 'POST'
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      if (Array.isArray(data.logs)) {
+        const existingIds = new Set(this.emailLogs.map(l => l.id));
+        const newEntries = data.logs.filter((l: EmailLog) => !existingIds.has(l.id));
+        this.emailLogs = [...newEntries, ...this.emailLogs];
+        this.persistEmailLogs();
+      }
+      this.notify();
+      return data.sent > 0;
+    }
+    return false;
+  }
+
+  public async fetchAdminOverview(): Promise<{
+    stats: ReturnType<OrbitDataStore['getAdminStats']>;
+    logs: EmailLog[];
+    users: (UserProfile & { reminderSettings?: ReminderSettings })[];
+    mailProviderStatus: MailProviderStatus;
+  } | null> {
+    try {
+      const res = await fetch('/api/admin/overview');
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data.success) {
+        if (Array.isArray(data.logs)) {
+          this.emailLogs = data.logs;
+          this.persistEmailLogs();
+        }
+        if (Array.isArray(data.users)) {
+          this.mergeServerUsers(data.users);
+          for (const u of data.users) {
+            if (u.reminderSettings) {
+              this.reminderSettingsMap[u.id] = u.reminderSettings;
+            }
+          }
+          this.persistReminders();
+        }
+        return {
+          stats: data.stats,
+          logs: data.logs,
+          users: data.users,
+          mailProviderStatus: data.mailProviderStatus
+        };
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  }
+
+  public async saveMailConfig(cfg: {
+    smtpHost?: string;
+    smtpPort?: number;
+    smtpUser?: string;
+    smtpPass?: string;
+    resendFromEmail?: string;
+  }): Promise<MailProviderStatus> {
+    const res = await fetch('/api/admin/mail-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Failed to save mail configuration');
+    }
+    return data.mailProviderStatus;
   }
 
   // --- Admin Dataset & Platform Stats ---
@@ -762,7 +1075,7 @@ CodeOrbit Team`;
 
     return {
       totalUsers,
-      verifiedUsers: totalUsers, // All accounts are verified on signup
+      verifiedUsers: totalUsers,
       activeUsers,
       totalQuestions: QUESTIONS_DATA.length,
       verifiedStats: VERIFIED_QUESTIONS_STATS,
@@ -770,8 +1083,8 @@ CodeOrbit Team`;
         totalEligible: eligibleCount,
         sentCount,
         failedCount,
-        successRate: (sentCount + failedCount) > 0 ? Math.round((sentCount / (sentCount + failedCount)) * 100) : 100,
-        lastExecution: emailLogs[0]?.sent_at || '10:00 PM IST Scheduled'
+        successRate: sentCount + failedCount > 0 ? Math.round((sentCount / (sentCount + failedCount)) * 100) : 100,
+        lastExecution: emailLogs[0]?.sent_at || '1:00 PM, 5:30 PM & 10:00 PM IST'
       }
     };
   }

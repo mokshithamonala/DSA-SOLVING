@@ -33,7 +33,7 @@ export const VerifyEmailPage: React.FC = () => {
 
           <div className="mt-4 p-3 rounded-md bg-slate-950 border border-slate-800 text-[11px] text-slate-400 space-y-1 text-left">
             <div>· Daily Reminders: <strong className="text-emerald-400">Enabled</strong></div>
-            <div>· Scheduled Delivery: <strong className="text-slate-200 font-mono">10:00 PM IST</strong></div>
+            <div>· Scheduled Delivery: <strong className="text-slate-200 font-mono">1:00 PM · 5:30 PM · 10:00 PM IST</strong></div>
             <div>· Active Topic: <strong className="text-sky-400">Arrays (Phase 1)</strong></div>
           </div>
 

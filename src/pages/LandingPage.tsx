@@ -42,8 +42,8 @@ export const LandingPage: React.FC = () => {
 
           <p className="mt-6 text-base sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed text-balance">
             CodeOrbit empowers students and developers to master Data Structures and Algorithms through 
-            <strong className="text-slate-200"> 400+ verified LeetCode Easy challenges</strong>, daily 5-question assignments with automatic carry-forward, and 
-            <strong className="text-slate-200"> automated 10:00 PM IST email reminders</strong>.
+            <strong className="text-slate-200"> 400+ verified LeetCode Easy challenges</strong>, daily 5-question assignments with carry-forward + top-up, and 
+            <strong className="text-slate-200"> automated daily email reminders at 1:00 PM, 5:30 PM & 10:00 PM IST</strong>.
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -74,7 +74,7 @@ export const LandingPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Automated 10 PM IST Email Reminders</span>
+              <span>1:00 PM, 5:30 PM & 10:00 PM IST Reminders</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -118,13 +118,13 @@ export const LandingPage: React.FC = () => {
               <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-4">
                 <Clock className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-semibold text-white">Automatic Carry-Forward</h3>
+              <h3 className="text-base font-semibold text-white">Carry-Forward + Top-Up to 5</h3>
               <p className="mt-2 text-xs text-slate-400 leading-relaxed">
-                Never lose track of unfinished questions. If you complete 2 out of 5 today, the remaining 3 roll over to tomorrow automatically. No new workload until cleared.
+                Never lose track of unfinished questions. If you solve 3 out of 5 today, the remaining 2 carry forward tomorrow and 3 new problems are added to keep your daily target at 5.
               </p>
             </div>
             <div className="mt-6 pt-4 border-t border-slate-800/80 text-[11px] text-amber-400 font-mono">
-              Zero lost tasks · Stable assignments
+              Zero lost tasks · Personalized daily batch
             </div>
           </div>
 
@@ -134,13 +134,13 @@ export const LandingPage: React.FC = () => {
               <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-4">
                 <Bell className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-semibold text-white">Automated Daily 10 PM IST Reminders</h3>
+              <h3 className="text-base font-semibold text-white">3x Daily IST Email Reminders</h3>
               <p className="mt-2 text-xs text-slate-400 leading-relaxed">
-                Every registered user is automatically enrolled. A scheduled background worker dispatches personalized daily emails with their exact questions and pending status.
+                Every logged-in user is automatically enrolled. A background scheduler dispatches personalized emails daily at 1:00 PM, 5:30 PM & 10:00 PM IST with their exact solved and pending questions.
               </p>
             </div>
             <div className="mt-6 pt-4 border-t border-slate-800/80 text-[11px] text-emerald-400 font-mono">
-              Resend integration · Duplicate-safe
+              Auto-enrolled on login · Duplicate-safe
             </div>
           </div>
         </div>
@@ -242,7 +242,7 @@ export const LandingPage: React.FC = () => {
           Ready to Elevate Your Daily DSA Consistency?
         </h2>
         <p className="mt-3 text-sm text-slate-400">
-          Create your free account today. Start practicing your first 5 questions immediately and receive tonight's 10:00 PM IST reminder automatically.
+          Create your free account today. Start practicing your first 5 questions immediately and receive automated reminders at 1:00 PM, 5:30 PM & 10:00 PM IST.
         </p>
         <div className="mt-6 flex justify-center">
           <Link
@@ -261,7 +261,7 @@ export const LandingPage: React.FC = () => {
           <span className="font-semibold text-slate-300">CodeOrbit</span> · Your Daily DSA Practice Platform
         </div>
         <div>
-          Timezone: <span className="font-mono text-slate-400">Asia/Kolkata</span> · Scheduled Reminders: <span className="font-mono text-slate-400">22:00 IST</span>
+          Timezone: <span className="font-mono text-slate-400">Asia/Kolkata</span> · Scheduled Reminders: <span className="font-mono text-slate-400">1:00 PM, 5:30 PM & 10:00 PM IST</span>
         </div>
       </footer>
     </div>

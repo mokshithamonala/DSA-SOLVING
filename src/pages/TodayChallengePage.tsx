@@ -17,8 +17,8 @@ import confetti from 'canvas-confetti';
 import { Link } from 'react-router-dom';
 
 export const TodayChallengePage: React.FC = () => {
-  const { user } = useAuth();
-  const [updateTrigger, setUpdateTrigger] = useState(0);
+  const { user, dataVersion } = useAuth();
+  const [, setUpdateTrigger] = useState(0);
 
   if (!user) return null;
 
@@ -46,8 +46,8 @@ export const TodayChallengePage: React.FC = () => {
   };
 
   const handleGenerateNextBatch = () => {
-    // If user cleared their daily workload, assign next 5 questions from active topic
-    OrbitDB.generateDailyAssignments(user.id);
+    // Assign next 5 questions from active topic and sync to backend
+    OrbitDB.generateDailyAssignments(user.id, true);
     setUpdateTrigger(prev => prev + 1);
   };
 
@@ -188,7 +188,7 @@ export const TodayChallengePage: React.FC = () => {
                     {isCarried && (
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        Carried Forward
+                        Carried Forward{assignment.original_date ? ` (from ${assignment.original_date})` : ''}
                       </span>
                     )}
 
@@ -237,7 +237,7 @@ export const TodayChallengePage: React.FC = () => {
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-amber-400 shrink-0" />
           <span>
-            <strong>Carry-Forward Rule:</strong> Any question not checked off today will carry forward automatically to tomorrow. No unfinished problem is ever dropped or lost.
+            <strong>Carry-Forward + Top-Up Rule:</strong> Any unfinished questions from today automatically carry forward tomorrow and combine with new unsolved questions to make 5 total (e.g., 2 pending + 3 new = 5).
           </span>
         </div>
         <Link to="/roadmap" className="text-sky-400 hover:text-sky-300 font-semibold whitespace-nowrap">

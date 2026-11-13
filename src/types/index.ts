@@ -47,6 +47,7 @@ export interface DailyAssignment {
   user_id: string;
   question_id: string;
   assignment_date: string; // YYYY-MM-DD
+  original_date?: string; // Preserved original assignment date when carried forward
   assignment_type: 'new' | 'carried_forward';
   status: 'pending' | 'completed';
   completed_at?: string;
@@ -66,7 +67,8 @@ export interface ReminderSettings {
   email: string;
   reminders_enabled: boolean;
   timezone: string;
-  reminder_time: string; // e.g., '22:00'
+  reminder_time: string; // e.g., '13:00, 17:30, 22:00'
+  reminder_slots?: string[]; // ['13:00', '17:30', '22:00']
   updated_at: string;
 }
 
@@ -75,9 +77,11 @@ export interface EmailLog {
   user_id: string;
   recipient_email: string;
   email_type: string;
+  reminder_slot?: string;
   scheduled_date: string;
   sent_at: string;
   delivery_status: 'sent' | 'failed' | 'pending';
+  provider?: string;
   error_message?: string;
 }
 

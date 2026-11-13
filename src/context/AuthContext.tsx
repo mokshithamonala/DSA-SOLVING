@@ -7,6 +7,7 @@ interface AuthContextType {
   allUsers: UserProfile[];
   isAdmin: boolean;
   isLoading: boolean;
+  dataVersion: number;
   login: (email: string, pass: string) => Promise<UserProfile>;
   signup: (fullName: string, email: string, pass: string) => Promise<UserProfile>;
   logout: () => void;
@@ -21,22 +22,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserProfile | null>(null);
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [dataVersion, setDataVersion] = useState<number>(0);
 
   const syncState = () => {
     const current = OrbitDB.getActiveUser();
     setUser(current);
     setAllUsers(OrbitDB.getUsers());
+    setDataVersion(OrbitDB.getVersion());
     setIsLoading(false);
   };
 
   useEffect(() => {
     syncState();
+    const unsubscribe = OrbitDB.subscribe(() => {
+      syncState();
+    });
+    void OrbitDB.bootstrapFromServer();
+    return unsubscribe;
   }, []);
 
   const login = async (email: string, pass: string): Promise<UserProfile> => {
     setIsLoading(true);
     try {
-      const res = OrbitDB.loginUser(email, pass);
+      const res = await OrbitDB.loginUserAsync(email, pass);
       syncState();
       return res.user;
     } finally {
@@ -47,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (fullName: string, email: string, pass: string): Promise<UserProfile> => {
     setIsLoading(true);
     try {
-      const res = OrbitDB.registerUser(fullName, email, pass);
+      const res = await OrbitDB.registerUserAsync(fullName, email, pass);
       syncState();
       return res.user;
     } finally {
@@ -83,6 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         allUsers,
         isAdmin: user?.role === 'admin',
         isLoading,
+        dataVersion,
         login,
         signup,
         logout,

@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS public.daily_assignments (
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     question_id TEXT NOT NULL REFERENCES public.questions(id) ON DELETE CASCADE,
     assignment_date DATE NOT NULL,
+    original_date DATE,
     assignment_type TEXT NOT NULL DEFAULT 'new' CHECK (assignment_type IN ('new', 'carried_forward')),
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
     completed_at TIMESTAMPTZ,
@@ -105,7 +106,8 @@ CREATE TABLE IF NOT EXISTS public.reminder_settings (
     email TEXT NOT NULL,
     reminders_enabled BOOLEAN NOT NULL DEFAULT true,
     timezone TEXT NOT NULL DEFAULT 'Asia/Kolkata',
-    reminder_time TEXT NOT NULL DEFAULT '22:00',
+    reminder_time TEXT NOT NULL DEFAULT '13:00, 17:30, 22:00',
+    reminder_slots TEXT[] NOT NULL DEFAULT ARRAY['13:00', '17:30', '22:00'],
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
@@ -116,11 +118,12 @@ CREATE TABLE IF NOT EXISTS public.email_logs (
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     recipient_email TEXT NOT NULL,
     email_type TEXT NOT NULL DEFAULT 'daily_reminder',
+    reminder_slot TEXT NOT NULL DEFAULT '22:00',
     scheduled_date DATE NOT NULL,
     sent_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     delivery_status TEXT NOT NULL DEFAULT 'sent' CHECK (delivery_status IN ('sent', 'failed', 'pending')),
     error_message TEXT,
-    CONSTRAINT unique_daily_delivery UNIQUE (user_id, scheduled_date, email_type)
+    CONSTRAINT unique_daily_delivery UNIQUE (user_id, scheduled_date, reminder_slot)
 );
 
 -- 11. Create Import Logs Table (Question Dataset Auditing)
@@ -220,9 +223,9 @@ BEGIN
         'user'
     );
 
-    -- 2. Create Reminder Settings (Defaults: enabled, 22:00, Asia/Kolkata)
-    INSERT INTO public.reminder_settings (user_id, email, reminders_enabled, timezone, reminder_time)
-    VALUES (NEW.id, NEW.email, true, 'Asia/Kolkata', '22:00');
+    -- 2. Create Reminder Settings (Defaults: enabled, 1:00 PM / 5:30 PM / 10:00 PM IST)
+    INSERT INTO public.reminder_settings (user_id, email, reminders_enabled, timezone, reminder_time, reminder_slots)
+    VALUES (NEW.id, NEW.email, true, 'Asia/Kolkata', '13:00, 17:30, 22:00', ARRAY['13:00', '17:30', '22:00']);
 
     -- 3. Initialize Streaks
     INSERT INTO public.streaks (user_id, current_streak, longest_streak)

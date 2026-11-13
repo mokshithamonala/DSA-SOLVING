@@ -1,13 +1,11 @@
-import React from 'react';
-import { 
-  ShieldCheck, 
-  Users, 
-  CheckCircle2, 
-  BookOpen, 
-  BellRing, 
+import React, { useEffect, useState } from 'react';
+import {
+  ShieldCheck,
+  Users,
+  BookOpen,
+  BellRing,
   ArrowRight,
   Sparkles,
-  Server,
   Activity
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -15,10 +13,20 @@ import { OrbitDB } from '../../lib/orbitDB';
 import { Link } from 'react-router-dom';
 
 export const AdminDashboardPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, dataVersion } = useAuth();
+  const [serverStats, setServerStats] = useState<ReturnType<typeof OrbitDB.getAdminStats> | null>(null);
+
+  useEffect(() => {
+    void OrbitDB.fetchAdminOverview().then(res => {
+      if (res?.stats) {
+        setServerStats(res.stats);
+      }
+    });
+  }, [dataVersion]);
+
   if (!user) return null;
 
-  const adminStats = OrbitDB.getAdminStats();
+  const adminStats = serverStats || OrbitDB.getAdminStats();
 
   return (
     <div className="space-y-6">
@@ -36,7 +44,7 @@ export const AdminDashboardPage: React.FC = () => {
             <span>CodeOrbit Control Center</span>
           </h1>
           <p className="mt-1 text-xs text-slate-400">
-            Monitor registered users, inspect question collection integrity, and audit automated email pipelines.
+            Monitor registered users, inspect question collection integrity, and audit automated 3x-daily email pipelines.
           </p>
         </div>
 
@@ -60,7 +68,6 @@ export const AdminDashboardPage: React.FC = () => {
 
       {/* Primary KPI Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {/* Total Users */}
         <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs">Total Registered</span>
@@ -72,7 +79,6 @@ export const AdminDashboardPage: React.FC = () => {
           <span className="text-[11px] text-slate-500 mt-1 block">Open signup (unlimited)</span>
         </div>
 
-        {/* Verified Easy Questions */}
         <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs">Verified Easy Questions</span>
@@ -84,7 +90,6 @@ export const AdminDashboardPage: React.FC = () => {
           <span className="text-[11px] text-emerald-500/80 mt-1 block">400+ Requirement Satisfied</span>
         </div>
 
-        {/* Email Success Rate */}
         <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs">Email Delivery Rate</span>
@@ -98,7 +103,6 @@ export const AdminDashboardPage: React.FC = () => {
           </span>
         </div>
 
-        {/* Active Practice Accounts */}
         <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs">Active Users</span>
@@ -113,7 +117,6 @@ export const AdminDashboardPage: React.FC = () => {
 
       {/* Two Column Deep Dives */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Questions Collection Status */}
         <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -128,7 +131,7 @@ export const AdminDashboardPage: React.FC = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
             <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
               <span className="text-slate-400 block text-[11px]">Total Imported</span>
-              <span className="font-bold text-slate-100 font-mono mt-0.5 block">682</span>
+              <span className="font-bold text-slate-100 font-mono mt-0.5 block">{adminStats.totalQuestions}</span>
             </div>
             <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
               <span className="text-slate-400 block text-[11px]">Duplicate Records</span>
@@ -163,7 +166,6 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Email Pipeline & Scheduler Health */}
         <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -171,7 +173,7 @@ export const AdminDashboardPage: React.FC = () => {
               <span>Automated Reminder Pipeline</span>
             </h3>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-              Daily 22:00 IST
+              3x Daily IST
             </span>
           </div>
 
@@ -181,16 +183,16 @@ export const AdminDashboardPage: React.FC = () => {
               <span className="text-slate-200 font-mono">Asia/Kolkata</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">Scheduled Trigger:</span>
-              <span className="text-sky-400 font-mono font-semibold">10:00 PM (16:30 UTC)</span>
+              <span className="text-slate-400">Scheduled Slots:</span>
+              <span className="text-sky-400 font-mono font-semibold">1:00 PM · 5:30 PM · 10:00 PM IST</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">All Registered Users Enrolled:</span>
+              <span className="text-slate-400">All Logged-In Users Enrolled:</span>
               <span className="text-emerald-400 font-semibold">Yes (Automatic)</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Duplicate Prevention:</span>
-              <span className="text-emerald-400 font-semibold">Enforced via email_logs constraint</span>
+              <span className="text-emerald-400 font-semibold">Enforced per (user, date, slot)</span>
             </div>
           </div>
 
@@ -199,7 +201,7 @@ export const AdminDashboardPage: React.FC = () => {
               to="/admin/emails"
               className="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1.5"
             >
-              <span>Inspect Delivery Logs & Test Scheduled Batch</span>
+              <span>Inspect Delivery Logs, Configure SMTP & Trigger Batches</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>

@@ -21,7 +21,7 @@ export const PublicNavbar: React.FC = () => {
         <a href="#features" className="hover:text-slate-100 transition-colors whitespace-nowrap shrink-0">Platform Overview</a>
         <a href="#question-bank" className="hover:text-slate-100 transition-colors whitespace-nowrap shrink-0">400+ Verified Easy</a>
         <a href="#roadmap" className="hover:text-slate-100 transition-colors whitespace-nowrap shrink-0">DSA Roadmap</a>
-        <a href="#reminders" className="hover:text-slate-100 transition-colors whitespace-nowrap shrink-0">10 PM IST Reminders</a>
+        <a href="#features" className="hover:text-slate-100 transition-colors whitespace-nowrap shrink-0">Daily IST Reminders</a>
       </nav>
 
       {/* Zone 3: Primary Action */}

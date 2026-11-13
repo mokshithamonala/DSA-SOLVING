@@ -8,12 +8,13 @@ export const ProfilePage: React.FC = () => {
   if (!user) return null;
 
   const [fullName, setFullName] = useState(user.full_name);
+  const [email, setEmail] = useState(user.email);
   const [saved, setSaved] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (fullName.trim()) {
-      updateProfile({ full_name: fullName.trim() });
+    if (fullName.trim() && email.trim().includes('@')) {
+      updateProfile({ full_name: fullName.trim(), email: email.trim().toLowerCase() });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     }
@@ -38,7 +39,7 @@ export const ProfilePage: React.FC = () => {
       {saved && (
         <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>Profile changes saved successfully.</span>
+          <span>Profile & reminder email updated successfully.</span>
         </div>
       )}
 
@@ -80,16 +81,17 @@ export const ProfilePage: React.FC = () => {
 
           <div>
             <label className="block text-xs font-medium text-slate-300">
-              Email Address (Authentication & Reminders)
+              Email Address (Authentication & Automated Reminders)
             </label>
             <input
               type="email"
-              disabled
-              value={user.email}
-              className="mt-1 block w-full rounded-md bg-slate-950/60 border border-slate-800/80 px-3 py-2 text-xs text-slate-400 cursor-not-allowed font-mono"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 block w-full rounded-md bg-slate-950 border border-slate-800 px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-sky-500 font-mono"
             />
             <span className="block mt-1 text-[11px] text-slate-500">
-              Your registered email is automatically synchronized with the 10:00 PM IST reminder system.
+              Your registered email is automatically enrolled for daily 1:00 PM, 5:30 PM & 10:00 PM IST reminders.
             </span>
           </div>
 

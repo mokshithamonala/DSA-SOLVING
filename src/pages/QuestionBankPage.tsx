@@ -19,7 +19,7 @@ import confetti from 'canvas-confetti';
 const ITEMS_PER_PAGE = 25;
 
 export const QuestionBankPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, dataVersion } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'solved' | 'unsolved'>('all');
@@ -76,7 +76,7 @@ export const QuestionBankPage: React.FC = () => {
 
       return true;
     });
-  }, [searchQuery, selectedTopic, statusFilter, accessFilter, updateTrigger, user.id]);
+  }, [searchQuery, selectedTopic, statusFilter, accessFilter, updateTrigger, dataVersion, user.id]);
 
   // Pagination
   const totalPages = Math.ceil(filteredQuestions.length / ITEMS_PER_PAGE) || 1;

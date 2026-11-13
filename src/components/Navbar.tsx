@@ -68,10 +68,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/80 border border-slate-800 text-slate-300">
-          <Bell className="w-3.5 h-3.5 text-amber-400" />
-          <span>Reminder: <strong className="font-mono text-slate-200">10:00 PM IST</strong></span>
-        </div>
+        <Link
+          to="/settings"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/80 border border-slate-800 hover:border-slate-700 text-slate-300 transition-colors"
+        >
+          <Bell className={`w-3.5 h-3.5 ${reminderSettings.reminders_enabled ? 'text-amber-400' : 'text-slate-500'}`} />
+          <span>
+            Reminders:{' '}
+            <strong className="font-mono text-slate-200">
+              {reminderSettings.reminders_enabled ? '1:00 PM · 5:30 PM · 10:00 PM IST' : 'Paused'}
+            </strong>
+          </span>
+        </Link>
       </div>
 
       {/* Zone 3: Streak Counter & Primary Action */}
